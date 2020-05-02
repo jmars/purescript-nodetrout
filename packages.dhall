@@ -4,9 +4,10 @@ let mkPackage =
 let upstream =
       https://raw.githubusercontent.com/purescript/package-sets/psc-0.13.4-20191110/src/packages.dhall sha256:563a7f694e18e6399f7f6d01f5b7e3c3345781655d99945768f48e458feb93a4
 
-let overrides = {=}
-
-let additions = {=}
+let overrides =
+      { trout =
+          https://raw.githubusercontent.com/jmars/purescript-trout/headers/spago.dhall sha256:686a9bc541e2392f6d15c4616cd8bfa3e8b7e0af61a288570e29e3800292ef41
+      }
 
 let additions = {=}
 

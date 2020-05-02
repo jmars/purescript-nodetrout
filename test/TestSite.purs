@@ -27,7 +27,7 @@ import Type.Trout
   , ReqBody
   , Resource
   )
-import Type.Trout.ContentType.HTML (HTML, class EncodeHTML)
+import Type.Trout.ContentType.HTML (HTML, class EncodeHTML, WithoutHeaders)
 import Type.Trout.ContentType.JSON (JSON)
 import Type.Trout.Method (Get, Post)
 import Type.Trout.PathPiece (class FromPathPiece)
@@ -65,8 +65,8 @@ data Admin = Admin String
 instance encodeHTMLAdmin :: EncodeHTML Admin where
   encodeHTML (Admin username) = h1 $ text username
 
-type Site = "default" := Resource (Get Default (JSON :<|> HTML))
-       :<|> "admin" := "admin" :/ Header "Authorization" String :> Resource (Get Admin HTML)
+type Site = "default" := Resource (Get Default (JSON :<|> (HTML WithoutHeaders)))
+       :<|> "admin" := "admin" :/ Header "Authorization" String :> Resource (Get Admin (HTML WithoutHeaders))
        :<|> "api" := "api" :/ (
          "messages" := "messages" :/ (
                 "messages" := QueryParams "content" String :> QueryParam "unread" PathBoolean :> Resource (Get (Array Message) JSON)

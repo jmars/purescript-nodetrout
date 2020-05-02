@@ -166,7 +166,22 @@ instance routerQueryParams ::
         Left _ ->
           throwError error400 { priority = depth, details = Just ("Invalid value for query parameter " <> label) }
 
-instance routerHeader ::
+instance routerOptionalHeader ::
+  ( Monad m
+  , Router layout handlers m result
+  , IsSymbol name
+  , FromHeader value
+  ) => Router (Header name (Maybe value) :> layout) ((Maybe value) -> handlers) m result where
+  route _ handlers request depth =
+    let
+      name = reflectSymbol (SProxy :: SProxy name)
+    in
+      case (note ("Missing value") (Request.headerValue name request) >>= fromHeader) of
+        Right value ->
+          route (Proxy :: Proxy layout) (handlers (Just value)) request $ depth + 1
+        Left error ->
+          route (Proxy :: Proxy layout) (handlers Nothing) request $ depth + 1
+else instance routerHeader ::
   ( Monad m
   , Router layout handlers m result
   , IsSymbol name

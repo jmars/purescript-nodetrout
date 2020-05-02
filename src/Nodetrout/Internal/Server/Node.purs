@@ -6,9 +6,12 @@ import Control.Monad.Except (runExceptT)
 import Data.Array (cons)
 import Data.Either (Either(..))
 import Data.Foldable (find)
+import Data.FoldableWithIndex (foldlWithIndex)
+import Data.Map (Map)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.MediaType (MediaType(..))
 import Data.Tuple (Tuple(..))
+import Data.Tuple.Nested (type (/\), (/\))
 import Effect (Effect)
 import Effect.Aff (Aff, makeAff, nonCanceler, runAff_)
 import Effect.Class (class MonadEffect, liftEffect)
@@ -17,15 +20,7 @@ import Effect.Ref (modify_, new, read, write) as Ref
 import Node.Buffer (concat, toString) as Buffer
 import Node.Encoding (Encoding(UTF8))
 import Node.HTTP (Request, Response) as NH
-import Node.HTTP
-  ( requestHeaders
-  , requestMethod
-  , requestAsStream
-  , requestURL
-  , responseAsStream
-  , setHeader
-  , setStatusCode
-  )
+import Node.HTTP (requestHeaders, requestMethod, requestAsStream, requestURL, responseAsStream, setHeader, setStatusCode)
 import Node.Stream (Writable, end, onData, onEnd, writeString) as Stream
 import Nodetrout.Internal.Request (Request(..))
 import Nodetrout.Internal.Router (class Router, route)
@@ -98,12 +93,17 @@ serve layout handlers runM onError req res =
         Right (Tuple (MediaType contentType) content) -> do
           setStatusCode res 200
           setHeader res "content-type" contentType
-          writeResponse rs content
+          writeResponse res rs content
           Stream.end rs $ pure unit
 
 -- | Specifies how to write `content` to a response stream.
 class ResponseWritable content where
-  writeResponse :: Stream.Writable () -> content -> Effect Unit
+  writeResponse :: NH.Response -> Stream.Writable () -> content -> Effect Unit
 
 instance responseWritableString :: ResponseWritable String where
-  writeResponse stream content = Stream.writeString stream UTF8 content (pure unit) *> pure unit
+  writeResponse _ stream content = Stream.writeString stream UTF8 content (pure unit) *> pure unit
+
+instance responseWritableHeadersString :: ResponseWritable ((Map String String) /\ String) where
+  writeResponse res stream (headers /\ content) = do
+    foldlWithIndex (\ k prev v -> prev *> setHeader res k v) (pure unit) headers
+    Stream.writeString stream UTF8 content (pure unit) *> pure unit
